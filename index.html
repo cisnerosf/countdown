@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COUNTDOWN</title>
+<style>
+  :root {
+    --red: #ffe64d;
+    --red-dim: #8f7300;
+    --red-glow: rgba(255, 230, 77, 0.95);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Courier New", "Consolas", monospace;
+    color: var(--red);
+    position: relative;
+  }
+
+  /* subtle scanlines + vignette for a retro broadcast-monitor feel */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.025) 0px,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 2px,
+      transparent 4px
+    );
+    z-index: 2;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at center,
+      transparent 40%,
+      rgba(0, 0, 0, 0.85) 100%
+    );
+    z-index: 3;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(1rem, 3vw, 2.5rem);
+  }
+
+  .caption {
+    letter-spacing: 0.6em;
+    font-size: clamp(0.7rem, 1.6vw, 1.1rem);
+    color: var(--red);
+    text-shadow: 0 0 8px var(--red-glow), 0 0 18px var(--red-glow);
+    text-transform: uppercase;
+    animation: flicker 3.2s infinite;
+    padding-left: 0.6em; /* compensate for letter-spacing visual offset */
+  }
+
+  .target-date {
+    letter-spacing: 0.35em;
+    font-size: clamp(0.6rem, 1.1vw, 0.85rem);
+    color: var(--red-dim);
+    text-transform: uppercase;
+    padding-left: 0.35em;
+  }
+
+  .clock {
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(0.4rem, 1.4vw, 1rem);
+  }
+
+  .segment {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(0.4rem, 1vw, 0.8rem);
+  }
+
+  .digits {
+    display: flex;
+    gap: clamp(0.15rem, 0.5vw, 0.4rem);
+  }
+
+  .digit-box {
+    background: #0a0800;
+    border-radius: 4px;
+    width: clamp(2.6rem, 7.8vw, 5.5rem);
+    height: clamp(3.9rem, 11.7vw, 8.1rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(2.1rem, 6.5vw, 4.7rem);
+    font-weight: bold;
+    color: var(--red);
+    text-shadow: 0 0 6px var(--red-glow), 0 0 16px var(--red-glow), 0 0 32px rgba(255, 230, 77, 0.6);
+    box-shadow: inset 0 0 12px rgba(255, 230, 77, 0.4), 0 0 12px rgba(255, 230, 77, 0.3);
+    position: relative;
+  }
+
+  .digit-box::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 4px;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.35) 0px,
+      rgba(0, 0, 0, 0.35) 2px,
+      transparent 3px,
+      transparent 6px
+    );
+    pointer-events: none;
+  }
+
+  .label {
+    letter-spacing: 0.3em;
+    font-size: clamp(0.55rem, 1vw, 0.8rem);
+    color: var(--red-dim);
+    text-transform: uppercase;
+  }
+
+  .colon {
+    align-self: center;
+    font-size: clamp(2.1rem, 6.5vw, 4.7rem);
+    font-weight: bold;
+    color: var(--red);
+    text-shadow: 0 0 8px var(--red-glow), 0 0 16px var(--red-glow);
+    margin-top: clamp(-0.4rem, -0.5vw, -0.6rem);
+    animation: blink 1s steps(1) infinite;
+  }
+
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0.15; }
+  }
+
+  @keyframes flicker {
+    0%, 92%, 100% { opacity: 1; }
+    93% { opacity: 0.6; }
+    95% { opacity: 1; }
+    96% { opacity: 0.4; }
+    97% { opacity: 1; }
+  }
+
+  .done .caption {
+    animation: none;
+  }
+
+  .done .digit-box {
+    color: var(--red);
+  }
+</style>
+</head>
+<body>
+  <div class="wrap" id="wrap">
+    <div class="caption" id="caption">Time Remaining</div>
+
+    <div class="clock">
+      <div class="segment">
+        <div class="digits">
+          <div class="digit-box" id="d-tens">0</div>
+          <div class="digit-box" id="d-ones">0</div>
+        </div>
+        <div class="label">Days</div>
+      </div>
+
+      <div class="colon">:</div>
+
+      <div class="segment">
+        <div class="digits">
+          <div class="digit-box" id="h-tens">0</div>
+          <div class="digit-box" id="h-ones">0</div>
+        </div>
+        <div class="label">Hours</div>
+      </div>
+
+      <div class="colon">:</div>
+
+      <div class="segment">
+        <div class="digits">
+          <div class="digit-box" id="m-tens">0</div>
+          <div class="digit-box" id="m-ones">0</div>
+        </div>
+        <div class="label">Min</div>
+      </div>
+
+      <div class="colon">:</div>
+
+      <div class="segment">
+        <div class="digits">
+          <div class="digit-box" id="s-tens">0</div>
+          <div class="digit-box" id="s-ones">0</div>
+        </div>
+        <div class="label">Sec</div>
+      </div>
+    </div>
+
+    <div class="target-date">Target: 11 SEP 2026 &middot; 00:00:00 UTC</div>
+  </div>
+
+<script>
+  var TARGET = Date.UTC(2026, 8, 11, 0, 0, 0);
+
+  var els = {
+    dTens: document.getElementById('d-tens'),
+    dOnes: document.getElementById('d-ones'),
+    hTens: document.getElementById('h-tens'),
+    hOnes: document.getElementById('h-ones'),
+    mTens: document.getElementById('m-tens'),
+    mOnes: document.getElementById('m-ones'),
+    sTens: document.getElementById('s-tens'),
+    sOnes: document.getElementById('s-ones'),
+    caption: document.getElementById('caption'),
+    wrap: document.getElementById('wrap')
+  };
+
+  function setDigits(el1, el2, value) {
+    var padded = String(Math.max(0, value)).padStart(2, '0');
+    if (padded.length > 2) {
+      // overflow (e.g. 100+ days): show last two digits, tens box carries extra
+      el1.textContent = padded.slice(-2, -1);
+      el2.textContent = padded.slice(-1);
+    } else {
+      el1.textContent = padded.charAt(0);
+      el2.textContent = padded.charAt(1);
+    }
+  }
+
+  function update() {
+    var now = Date.now();
+    var diff = TARGET - now;
+
+    if (diff <= 0) {
+      setDigits(els.dTens, els.dOnes, 0);
+      setDigits(els.hTens, els.hOnes, 0);
+      setDigits(els.mTens, els.mOnes, 0);
+      setDigits(els.sTens, els.sOnes, 0);
+      els.caption.textContent = "Time's Up";
+      els.wrap.classList.add('done');
+      return;
+    }
+
+    var totalSeconds = Math.floor(diff / 1000);
+    var days = Math.floor(totalSeconds / 86400);
+    var hours = Math.floor((totalSeconds % 86400) / 3600);
+    var minutes = Math.floor((totalSeconds % 3600) / 60);
+    var seconds = totalSeconds % 60;
+
+    setDigits(els.dTens, els.dOnes, days);
+    setDigits(els.hTens, els.hOnes, hours);
+    setDigits(els.mTens, els.mOnes, minutes);
+    setDigits(els.sTens, els.sOnes, seconds);
+  }
+
+  update();
+  setInterval(update, 1000);
+</script>
+</body>
+</html>
